@@ -1,0 +1,29 @@
+# Build artifacts
+order_book_demo
+order_book_demo.dSYM/
+*.o
+*.obj
+*.out
+*.exe
+*.dSYM/
+*.a
+*.so
+*.dylib
+
+# Build directories
+build/
+cmake-build-*/
+out/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store

@@ -372,6 +372,43 @@ public:
         }
     }
 
+    // Sum of resting quantity a hypothetical incoming order could trade
+    // against, scanning from the best price outward across as many levels
+    // as necessary -- stopping once either `cap` is reached or price levels
+    // stop crossing.
+    //
+    // bestLevelHead() only ever exposes a single price level, which is all
+    // the normal match loop needs (it re-queries after each level empties).
+    // Fill-or-kill semantics are different: they need to know whether
+    // *enough* liquidity exists across potentially several levels before
+    // committing to any of it, which means looking past the best level
+    // before a single trade happens. That lookahead has to live here rather
+    // than in a MatchingEngine, because bids/asks are private -- this is
+    // the query that lets one ask the question without reaching into
+    // internals.
+    //
+    // `restingSide` is the side being scanned (the side opposite whatever
+    // incoming order is asking); `limitPrice`/`isMarket` describe that
+    // incoming order's own price. `cap` lets the caller stop early once it
+    // has its answer instead of always walking the whole side.
+    Quantity liquidityAvailable(Side restingSide, Price limitPrice, bool isMarket, Quantity cap) const {
+        Quantity total = 0;
+        if (restingSide == Side::Sell) {
+            for (const auto& [price, level] : asks) {
+                if (!isMarket && price > limitPrice) break;  // asks ascending: nothing further can cross either
+                total += level.totalQuantity;
+                if (total >= cap) break;
+            }
+        } else {
+            for (const auto& [price, level] : bids) {
+                if (!isMarket && price < limitPrice) break;  // bids descending: nothing further can cross either
+                total += level.totalQuantity;
+                if (total >= cap) break;
+            }
+        }
+        return total;
+    }
+
 private:
     // findOrCreateLevel: the one place addOrder() touches the sorted
     // tables. std::map::operator[] default-constructs a PriceLevel the
